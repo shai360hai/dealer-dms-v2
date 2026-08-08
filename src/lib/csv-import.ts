@@ -42,6 +42,36 @@ const HEADER_MAP: Record<string, string> = {
   "תמונות": "images",
 };
 
+/**
+ * Per-angle photo columns. Spreadsheets in the wild label these many
+ * ways — "קישור תמונה 1 (חזית)", "תמונה חזית", plain "חזית" — so the
+ * angle is detected from keywords anywhere in the header rather than by
+ * exact match. "פרופיל" (a side/profile shot) maps to the right side,
+ * and anything else numbered (wheels, details) is imported as an extra
+ * photo with no angle label.
+ */
+const ANGLE_KEYWORDS: { keywords: string[]; angle: string }[] = [
+  { keywords: ["חזית", "קדמי", "front"], angle: "front" },
+  { keywords: ["אחור", "rear", "back"], angle: "rear" },
+  { keywords: ["ימין", "right"], angle: "right" },
+  { keywords: ["שמאל", "left"], angle: "left" },
+  { keywords: ["פרופיל", "profile", "side"], angle: "right" },
+  { keywords: ["פנים", "interior"], angle: "interior" },
+];
+
+/** Returns the column key for an image header, or null if it isn't one.
+ *  Angle columns become "image:<angle>", unlabelled ones "image:extra". */
+function imageColumnKey(header: string): string | null {
+  const h = header.toLowerCase();
+  const mentionsImage = h.includes("תמונה") || h.includes("קישור") || h.includes("image") || h.includes("photo");
+  if (!mentionsImage) return null;
+
+  for (const { keywords, angle } of ANGLE_KEYWORDS) {
+    if (keywords.some((k) => h.includes(k))) return `image:${angle}`;
+  }
+  return "image:extra";
+}
+
 /** Strips BOM, apostrophe/quote variants (including the Hebrew geresh ׳
  *  and gershayim ״) and extra whitespace, so header lookup isn't
  *  defeated by typography. */
@@ -62,9 +92,16 @@ const MAPPED_NAMES = new Set(Object.values(HEADER_MAP));
  *  already-transformed name gets prefixed again ("__unmapped____unmapped__x")
  *  and every row then reads back as empty. */
 export function transformHeader(h: string): string {
-  if (MAPPED_NAMES.has(h) || h.startsWith(UNMAPPED_PREFIX)) return h;
+  if (MAPPED_NAMES.has(h) || h.startsWith(UNMAPPED_PREFIX) || h.startsWith("image:")) return h;
   const key = normalizeHeader(h);
-  return HEADER_MAP[key] ?? `${UNMAPPED_PREFIX}${key}`;
+  if (HEADER_MAP[key]) return HEADER_MAP[key];
+
+  // Several image columns can map to the same angle key; suffix
+  // duplicates so one doesn't silently overwrite another.
+  const imageKey = imageColumnKey(key);
+  if (imageKey) return imageKey;
+
+  return `${UNMAPPED_PREFIX}${key}`;
 }
 
 const FUEL_MAP: Record<string, FuelType> = {
@@ -134,6 +171,8 @@ export interface CsvRowResult {
 export interface ParsedVehicle extends VehicleFormInput {
   slug: string;
   imageUrls: string[];
+  /** Photos that arrived in dedicated per-angle columns. */
+  angleImages: { angle: string | null; url: string }[];
 }
 
 export interface CsvParseResult {
@@ -242,6 +281,9 @@ export function parseVehicleRows(
     }
 
     const imageUrls: string[] = [];
+    const angleImages: { angle: string | null; url: string }[] = [];
+
+    // A single "תמונה" column holding one or more links.
     const rawImages = get("images");
     if (rawImages) {
       for (const candidate of splitImageUrls(rawImages)) {
@@ -251,8 +293,26 @@ export function parseVehicleRows(
       }
     }
 
+    // Separate per-angle columns, e.g. "קישור תמונה 1 (חזית)".
+    for (const key of Object.keys(row)) {
+      if (!key.startsWith("image:")) continue;
+      const raw = (row[key] ?? "").trim();
+      if (!raw) continue;
+
+      const angle = key.slice("image:".length);
+      for (const candidate of splitImageUrls(raw)) {
+        const verdict = checkImageUrl(candidate);
+        if (!verdict.ok) {
+          imageWarnings.push({ rowNumber, reason: verdict.reason });
+          continue;
+        }
+        angleImages.push({ angle: angle === "extra" ? null : angle, url: verdict.url });
+      }
+    }
+
     valid.push({
       ...result.data,
+      angleImages,
       slug: slugify(result.data.brand, result.data.model, result.data.trim, result.data.year),
       imageUrls,
     });

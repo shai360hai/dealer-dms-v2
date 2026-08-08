@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "../lib/supabase";
 import { logActivity } from "../lib/activity";
 import { useAuth } from "./useAuth";
+import { sortByAngle } from "../lib/angles";
 import type { ParsedVehicle } from "../lib/csv-import";
 
 export interface ImportResult {
@@ -92,33 +93,47 @@ export function useImportVehicles() {
       }
 
       let inserted = 0;
-      const insertedIds: { id: string; imageUrls: string[] }[] = [];
+      const insertedIds: { id: string; imageUrls: string[]; angleImages: { angle: string | null; url: string }[] }[] = [];
       const BATCH = 25;
       for (let i = 0; i < toInsert.length; i += BATCH) {
         const batch = toInsert.slice(i, i + BATCH);
         const { data, error } = await supabase
           .from("vehicles")
-          .insert(batch.map(({ imageUrls: _imageUrls, ...v }) => v))
+          .insert(batch.map(({ imageUrls: _imageUrls, angleImages: _angleImages, ...v }) => v))
           .select("id");
         if (error) throw error;
         inserted += data?.length ?? 0;
         (data ?? []).forEach((row, j) => {
           const urls = batch[j]?.imageUrls ?? [];
-          if (urls.length > 0) insertedIds.push({ id: row.id, imageUrls: urls });
+          const angles = batch[j]?.angleImages ?? [];
+          if (urls.length > 0 || angles.length > 0) {
+            insertedIds.push({ id: row.id, imageUrls: urls, angleImages: angles });
+          }
         });
       }
 
       // Attach image links (no upload — storage_path stays null, which
       // the delete path already handles).
-      const imageRows = insertedIds.flatMap(({ id, imageUrls }) =>
-        imageUrls.map((url, i) => ({
+      // Per-angle photos lead, ordered front → rear → right → left →
+      // interior; unlabelled extras follow. The first photo becomes the
+      // cover, so a front shot is used whenever one was supplied.
+      const imageRows = insertedIds.flatMap(({ id, imageUrls, angleImages }) => {
+        const ordered = [
+          ...sortByAngle(
+            angleImages.map((a, i) => ({ ...a, order_index: i })),
+          ),
+          ...imageUrls.map((url) => ({ angle: null, url, order_index: 99 })),
+        ];
+
+        return ordered.map((img, i) => ({
           vehicle_id: id,
-          url,
+          url: img.url,
           storage_path: null,
+          angle: img.angle,
           order_index: i,
           is_cover: i === 0,
-        })),
-      );
+        }));
+      });
       let imagesAdded = 0;
       if (imageRows.length > 0) {
         for (let i = 0; i < imageRows.length; i += 100) {
