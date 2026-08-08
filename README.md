@@ -72,6 +72,27 @@ the account you created in step 2.
 | `admin` | Everything `editor` can, plus delete vehicles |
 | `super_admin` | Everything `admin` can, plus manage feature flags and other users' roles |
 
+## Importing vehicles from CSV
+
+**Admin → רכבים → ייבוא מ-CSV.** Drop in a CSV whose header row uses
+the same Hebrew field names as the vehicle form (יצרן, דגם, שנה, מחיר,
+מספר מלאי…). The importer:
+
+- maps Hebrew headers to database columns (tolerating apostrophe/
+  gershayim variants and Excel's BOM)
+- translates Hebrew enum values — `בנזין`/`דיזל`/`היברידי`/`בנזין-חשמל`/
+  `חשמלי` for fuel, `הנעה קדמית`/`אחורית`/`כפולה`/`4X4` for drive, etc.
+- splits comma-separated cells like תוספות ואבזור into separate tags
+- validates every row against the same rules the form uses, and shows a
+  per-row error list before importing anything
+- skips rows whose מספר מלאי already exists (or repeats within the file)
+  rather than failing the whole batch, and reports them afterward
+- derives a unique SEO slug per vehicle, de-duplicating collisions
+
+Unrecognised columns are listed and ignored. Note that a תמונה column
+containing image *links* is not imported — vehicle photos are uploaded
+through the edit screen, which stores them in Supabase Storage.
+
 ## Deploying
 
 **Vercel** (the only thing to deploy — Supabase is already hosted):
@@ -86,9 +107,13 @@ the account you created in step 2.
 4. Deploy.
 
 Since this is a single-page app with client-side routing, direct
-links to a route like `/admin/vehicles` need to be rewritten to
-`index.html` so React Router can handle them — Vercel does this
-automatically for Vite SPA projects, no extra config needed.
+links to a route like `/admin/vehicles` have to be rewritten to
+`index.html` so React Router can handle them. Vercel does **not** do
+this automatically for Vite projects — without it, opening
+`/admin` directly returns Vercel's own 404 page before the app ever
+loads. `vercel.json` in the repo root configures the rewrite (with
+`assets/` and `favicon.svg` excluded so real files still serve
+normally).
 
 ## Project structure
 

@@ -1,7 +1,8 @@
 import { useState, useDeferredValue } from "react";
 import { Link } from "react-router";
-import { Plus, Copy, Trash2, Eye, EyeOff } from "lucide-react";
+import { Plus, Copy, Trash2, Eye, EyeOff, Upload } from "lucide-react";
 import { Button, Input } from "../../components/ui";
+import { CsvImportDialog } from "../../components/CsvImportDialog";
 import { formatPrice, formatMileage } from "../../lib/format";
 import {
   useVehicles,
@@ -22,6 +23,7 @@ export default function VehiclesList() {
   const [sort, setSort] = useState<NonNullable<VehicleFilters["sort"]>>("newest");
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [showImport, setShowImport] = useState(false);
 
   const { data, isLoading, isFetching } = useVehicles({ q: deferredSearch || undefined, status: status || undefined, sort, page, pageSize: 20 });
   const deleteVehicle = useDeleteVehicle();
@@ -43,13 +45,20 @@ export default function VehiclesList() {
 
   return (
     <div>
+      {showImport && <CsvImportDialog onClose={() => setShowImport(false)} />}
+
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <h1 className="font-[family-name:var(--font-display)] text-2xl">רכבים</h1>
-        <Link to="/admin/vehicles/new">
-          <Button variant="gold">
-            <Plus size={16} /> הוספת רכב
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" onClick={() => setShowImport(true)}>
+            <Upload size={16} /> ייבוא מ-CSV
           </Button>
-        </Link>
+          <Link to="/admin/vehicles/new">
+            <Button variant="gold">
+              <Plus size={16} /> הוספת רכב
+            </Button>
+          </Link>
+        </div>
       </div>
 
       <div className="mb-4 flex flex-wrap gap-2">
