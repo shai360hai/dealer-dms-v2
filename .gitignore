@@ -7,3 +7,5 @@ dist/
 *.log
 .vscode/*
 !.vscode/extensions.json
+.vercel
+.env*

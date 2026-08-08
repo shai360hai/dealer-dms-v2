@@ -242,8 +242,14 @@ export function useDeleteVehicle() {
   const { user } = useAuth();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("vehicles").delete().eq("id", id);
+      // .select() matters: when RLS blocks a delete, Supabase returns
+      // success with zero rows rather than an error. Without checking
+      // what came back, a permissions failure looks like a no-op button.
+      const { data, error } = await supabase.from("vehicles").delete().eq("id", id).select("id");
       if (error) throw error;
+      if (!data || data.length === 0) {
+        throw new Error("אין לך הרשאה למחוק רכבים. נדרשת הרשאת מנהל (admin או super_admin).");
+      }
       await logActivity(user?.id, "VEHICLE_DELETED", "vehicle", id);
     },
     onSuccess: invalidate,
@@ -255,9 +261,12 @@ export function useBulkDeleteVehicles() {
   const { user } = useAuth();
   return useMutation({
     mutationFn: async (ids: string[]) => {
-      const { error } = await supabase.from("vehicles").delete().in("id", ids);
+      const { data, error } = await supabase.from("vehicles").delete().in("id", ids).select("id");
       if (error) throw error;
-      await logActivity(user?.id, "VEHICLES_BULK_DELETED", "vehicle", undefined, { ids });
+      if (!data || data.length === 0) {
+        throw new Error("אין לך הרשאה למחוק רכבים. נדרשת הרשאת מנהל (admin או super_admin).");
+      }
+      await logActivity(user?.id, "VEHICLES_BULK_DELETED", "vehicle", undefined, { ids, deleted: data.length });
     },
     onSuccess: invalidate,
   });

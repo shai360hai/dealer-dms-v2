@@ -47,6 +47,25 @@ export default function VehiclesList() {
     <div>
       {showImport && <CsvImportDialog onClose={() => setShowImport(false)} />}
 
+      {(deleteVehicle.isError || bulkDelete.isError) && (
+        <div className="mb-4 flex items-start justify-between gap-3 rounded-[var(--radius-card)] bg-[color-mix(in_srgb,var(--color-status-sold)_10%,white)] px-4 py-3 text-sm text-[var(--color-status-sold)]">
+          <span>
+            {(deleteVehicle.error ?? bulkDelete.error) instanceof Error
+              ? (deleteVehicle.error ?? bulkDelete.error)?.message
+              : "המחיקה נכשלה"}
+          </span>
+          <button
+            onClick={() => {
+              deleteVehicle.reset();
+              bulkDelete.reset();
+            }}
+            aria-label="סגירה"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <h1 className="font-[family-name:var(--font-display)] text-2xl">רכבים</h1>
         <div className="flex flex-wrap gap-2">
