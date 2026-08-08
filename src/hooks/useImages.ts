@@ -35,6 +35,35 @@ export function useUploadVehicleImage(vehicleId: string) {
   });
 }
 
+/** Attaches one or more images by URL only — nothing is uploaded and
+ *  no storage file is created, so `storage_path` stays null. The delete
+ *  path already skips storage cleanup for these (see useDeleteImage). */
+export function useAddImagesByUrl(vehicleId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (urls: string[]) => {
+      const { count } = await supabase
+        .from("vehicle_images")
+        .select("id", { count: "exact", head: true })
+        .eq("vehicle_id", vehicleId);
+      const start = count ?? 0;
+
+      const rows = urls.map((url, i) => ({
+        vehicle_id: vehicleId,
+        url: url.trim(),
+        storage_path: null,
+        order_index: start + i,
+        is_cover: start + i === 0,
+      }));
+
+      const { data, error } = await supabase.from("vehicle_images").insert(rows).select();
+      if (error) throw error;
+      return data as VehicleImage[];
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["vehicles", "detail", vehicleId] }),
+  });
+}
+
 export function useReorderImages(vehicleId: string) {
   const queryClient = useQueryClient();
   return useMutation({

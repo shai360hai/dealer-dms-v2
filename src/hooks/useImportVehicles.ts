@@ -2,14 +2,15 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "../lib/supabase";
 import { logActivity } from "../lib/activity";
 import { useAuth } from "./useAuth";
-import type { VehicleFormInput } from "../lib/schemas";
+import type { ParsedVehicle } from "../lib/csv-import";
 
 export interface ImportResult {
   inserted: number;
+  imagesAdded: number;
   skipped: { stockNumber: string; reason: string }[];
 }
 
-type ImportRow = VehicleFormInput & { slug: string };
+type ImportRow = ParsedVehicle;
 
 /** Blank optional text fields arrive as "" from the CSV; the database
  *  wants NULL so they don't render as empty strings on the site. */
@@ -91,20 +92,53 @@ export function useImportVehicles() {
       }
 
       let inserted = 0;
+      const insertedIds: { id: string; imageUrls: string[] }[] = [];
       const BATCH = 25;
       for (let i = 0; i < toInsert.length; i += BATCH) {
         const batch = toInsert.slice(i, i + BATCH);
-        const { data, error } = await supabase.from("vehicles").insert(batch).select("id");
+        const { data, error } = await supabase
+          .from("vehicles")
+          .insert(batch.map(({ imageUrls: _imageUrls, ...v }) => v))
+          .select("id");
         if (error) throw error;
         inserted += data?.length ?? 0;
+        (data ?? []).forEach((row, j) => {
+          const urls = batch[j]?.imageUrls ?? [];
+          if (urls.length > 0) insertedIds.push({ id: row.id, imageUrls: urls });
+        });
+      }
+
+      // Attach image links (no upload — storage_path stays null, which
+      // the delete path already handles).
+      const imageRows = insertedIds.flatMap(({ id, imageUrls }) =>
+        imageUrls.map((url, i) => ({
+          vehicle_id: id,
+          url,
+          storage_path: null,
+          order_index: i,
+          is_cover: i === 0,
+        })),
+      );
+      let imagesAdded = 0;
+      if (imageRows.length > 0) {
+        for (let i = 0; i < imageRows.length; i += 100) {
+          const { data, error } = await supabase
+            .from("vehicle_images")
+            .insert(imageRows.slice(i, i + 100))
+            .select("id");
+          // A failed image insert shouldn't undo a successful vehicle
+          // import — report it rather than throwing the whole batch away.
+          if (!error) imagesAdded += data?.length ?? 0;
+        }
       }
 
       await logActivity(user?.id, "VEHICLES_IMPORTED", "vehicle", undefined, {
         inserted,
         skipped: skipped.length,
+        imagesAdded,
       });
 
-      return { inserted, skipped };
+      return { inserted, skipped, imagesAdded };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["vehicles"] });

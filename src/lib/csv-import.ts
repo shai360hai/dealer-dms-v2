@@ -1,5 +1,6 @@
 import Papa from "papaparse";
 import { slugify } from "./format";
+import { checkImageUrl, splitImageUrls } from "./image-url";
 import { vehicleFormSchema, type VehicleFormInput } from "./schemas";
 import type { DriveType, FuelType, TransmissionType } from "../types/database";
 
@@ -37,6 +38,8 @@ const HEADER_MAP: Record<string, string> = {
   "הערות פנימיות": "dealer_notes",
   "מפורסם באתר": "published",
   "סטטוס": "status",
+  "תמונה": "images",
+  "תמונות": "images",
 };
 
 /** Strips BOM, apostrophe/quote variants (including the Hebrew geresh ׳
@@ -128,11 +131,19 @@ export interface CsvRowResult {
   errors: string[];
 }
 
+export interface ParsedVehicle extends VehicleFormInput {
+  slug: string;
+  imageUrls: string[];
+}
+
 export interface CsvParseResult {
-  valid: (VehicleFormInput & { slug: string })[];
+  valid: ParsedVehicle[];
   invalid: CsvRowResult[];
   totalRows: number;
   unmappedHeaders: string[];
+  /** Rows whose image cell held a search-page link rather than a direct
+   *  image URL. The vehicle still imports — just without that picture. */
+  imageWarnings: { rowNumber: number; reason: string }[];
 }
 
 export function parseVehiclesCsv(text: string): CsvParseResult {
@@ -146,8 +157,9 @@ export function parseVehiclesCsv(text: string): CsvParseResult {
     .filter((f) => f.startsWith(UNMAPPED_PREFIX))
     .map((f) => f.slice(UNMAPPED_PREFIX.length));
 
-  const valid: (VehicleFormInput & { slug: string })[] = [];
+  const valid: ParsedVehicle[] = [];
   const invalid: CsvRowResult[] = [];
+  const imageWarnings: { rowNumber: number; reason: string }[] = [];
 
   parsed.data.forEach((row, i) => {
     // +2: one for the header line, one because humans count from 1 —
@@ -214,11 +226,22 @@ export function parseVehiclesCsv(text: string): CsvParseResult {
       return;
     }
 
+    const imageUrls: string[] = [];
+    const rawImages = get("images");
+    if (rawImages) {
+      for (const candidate of splitImageUrls(rawImages)) {
+        const verdict = checkImageUrl(candidate);
+        if (verdict.ok) imageUrls.push(verdict.url);
+        else imageWarnings.push({ rowNumber, reason: verdict.reason });
+      }
+    }
+
     valid.push({
       ...result.data,
       slug: slugify(result.data.brand, result.data.model, result.data.trim, result.data.year),
+      imageUrls,
     });
   });
 
-  return { valid, invalid, totalRows: parsed.data.length, unmappedHeaders };
+  return { valid, invalid, totalRows: parsed.data.length, unmappedHeaders, imageWarnings };
 }
