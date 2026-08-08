@@ -1,0 +1,48 @@
+@import url("https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@400;500;700&family=Heebo:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap");
+@import "tailwindcss";
+
+@theme {
+  --color-ink: #0a0d12;
+  --color-ink-soft: #141922;
+  --color-porcelain: #f7f7f5;
+  --color-porcelain-dim: #edece8;
+  --color-navy: #0e2a4d;
+  --color-navy-light: #1c3f6e;
+  --color-steel: #d8dce3;
+  --color-steel-dark: #4b5563;
+  --color-chrome-gold: #c6a15b;
+  --color-chrome-gold-soft: #e4d3ab;
+
+  --color-status-available: #2f8f5b;
+  --color-status-reserved: #c98a2c;
+  --color-status-sold: #8a3f3f;
+
+  --font-display: "Frank Ruhl Libre", ui-serif, Georgia, serif;
+  --font-sans: "Heebo", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", monospace;
+
+  --radius-card: 0.375rem;
+  --ease-signature: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--color-porcelain);
+  color: var(--color-ink);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-chrome-gold);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

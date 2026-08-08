@@ -1,0 +1,21 @@
+import * as React from "react";
+import { cn } from "./cn";
+
+export const Input = React.forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputElement>>(
+  ({ className, ...props }, ref) => (
+    <input
+      ref={ref}
+      dir="rtl"
+      className={cn(
+        "h-10 w-full rounded-[var(--radius-card)] border border-[var(--color-steel)] bg-white px-3 text-sm text-[var(--color-ink)] placeholder:text-[var(--color-steel-dark)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-navy)] disabled:opacity-50",
+        className,
+      )}
+      {...props}
+    />
+  ),
+);
+Input.displayName = "Input";
+
+export function Label({ className, ...props }: React.LabelHTMLAttributes<HTMLLabelElement>) {
+  return <label className={cn("mb-1 block text-sm font-medium text-[var(--color-ink)]", className)} {...props} />;
+}
