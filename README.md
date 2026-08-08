@@ -99,6 +99,19 @@ Unrecognised columns are listed and ignored. Note that a תמונה column
 containing image *links* is not imported — vehicle photos are uploaded
 through the edit screen, which stores them in Supabase Storage.
 
+## Vehicle photos
+
+Each vehicle has five standard photo slots — חזית / אחורי / צד ימין /
+צד שמאל / פנים הרכב — filled by pasting a direct image URL into the add
+or edit form. They always display in that order on the vehicle page,
+with the front shot used as the card thumbnail. Extra photos can still
+be uploaded (or added by URL) through the image manager on the edit
+screen; those appear after the five angles.
+
+Photo angles need one migration run once in Supabase → SQL Editor:
+`supabase/migration-add-image-angle.sql`. New projects created from
+`schema.sql` already include the column.
+
 ## Deploying
 
 **Vercel** (the only thing to deploy — Supabase is already hosted):

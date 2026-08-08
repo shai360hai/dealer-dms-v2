@@ -13,6 +13,7 @@ import {
   useDuplicateVehicle,
 } from "../../hooks/useVehicles";
 import type { VehicleFilters } from "../../hooks/useVehicles";
+import { pickCoverImage } from "../../lib/angles";
 
 const STATUS_LABEL: Record<string, string> = { available: "זמין", reserved: "שמור", sold: "נמכר" };
 
@@ -145,7 +146,7 @@ export default function VehiclesList() {
           </thead>
           <tbody className="divide-y divide-[var(--color-steel)]">
             {data?.items.map((v) => {
-              const cover = v.vehicle_images.find((i) => i.is_cover) ?? v.vehicle_images[0];
+              const cover = pickCoverImage(v.vehicle_images);
               return (
                 <tr key={v.id} className={isFetching ? "opacity-60" : undefined}>
                   <td className="px-3 py-2">

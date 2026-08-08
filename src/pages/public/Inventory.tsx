@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router";
 import { VehicleCard, Input, Button } from "../../components/ui";
 import { useVehicles, fetchPublishedBrands } from "../../hooks/useVehicles";
+import { pickCoverImage } from "../../lib/angles";
 
 const FUEL_LABEL: Record<string, string> = { petrol: "בנזין", diesel: "דיזל", hybrid: "היברידי", plugin_hybrid: "נטען (Plug-in)", electric: "חשמלי" };
 const TRANSMISSION_LABEL: Record<string, string> = { manual: "ידני", automatic: "אוטומטי", cvt: "CVT", dct: "DCT" };
@@ -97,7 +98,7 @@ export default function Inventory() {
           ) : (
             <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
               {data?.items.map((v) => (
-                <VehicleCard key={v.id} vehicle={v} coverImage={v.vehicle_images.find((i) => i.is_cover) ?? v.vehicle_images[0]} />
+                <VehicleCard key={v.id} vehicle={v} coverImage={pickCoverImage(v.vehicle_images)} />
               ))}
             </div>
           )}

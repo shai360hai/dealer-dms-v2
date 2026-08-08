@@ -1,8 +1,10 @@
+import { useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button, Card, CardHeader, CardTitle, CardContent, Input, Label } from "./ui";
 import { TagInput } from "./TagInput";
 import { vehicleFormSchema, type VehicleFormInput, type VehicleFormValues } from "../lib/schemas";
+import { VEHICLE_ANGLES, type AngleUrls } from "../lib/angles";
 import type { Vehicle } from "../types/database";
 
 function Field({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) {
@@ -19,13 +21,18 @@ const selectClass = "h-10 w-full rounded-[var(--radius-card)] border border-[var
 
 export function VehicleForm({
   defaultValues,
+  defaultAngleUrls,
   onSubmit,
   isSubmitting,
 }: {
   defaultValues?: Partial<Vehicle>;
-  onSubmit: (values: VehicleFormInput) => void;
+  defaultAngleUrls?: AngleUrls;
+  /** Angle photo links are handled outside the Zod schema — they're
+   *  rows in vehicle_images, not columns on vehicles. */
+  onSubmit: (values: VehicleFormInput, angleUrls: AngleUrls) => void;
   isSubmitting: boolean;
 }) {
+  const [angleUrls, setAngleUrls] = useState<AngleUrls>(defaultAngleUrls ?? {});
   const {
     register,
     control,
@@ -58,7 +65,7 @@ export function VehicleForm({
   });
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
+    <form onSubmit={handleSubmit((values) => onSubmit(values, angleUrls))} className="flex flex-col gap-4">
       <Card>
         <CardHeader><CardTitle>פרטים כלליים</CardTitle></CardHeader>
         <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -141,6 +148,29 @@ export function VehicleForm({
           <Field label="הערות פנימיות">
             <textarea {...register("dealer_notes")} rows={2} dir="rtl" className="w-full rounded-[var(--radius-card)] border border-[var(--color-steel)] bg-white p-3 text-sm" />
           </Field>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>תמונות הרכב (קישורים)</CardTitle>
+          <p className="text-sm text-[var(--color-steel-dark)]">
+            הדבק כתובת ישירה לתמונה (מסתיימת ב-.jpg / .png). התמונות יוצגו בעמוד הרכב
+            בסדר שלהלן, והתמונה הראשונה תשמש כתמונה הראשית. קישור לעמוד חיפוש תמונות
+            של גוגל לא יעבוד — צריך כתובת של התמונה עצמה.
+          </p>
+        </CardHeader>
+        <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          {VEHICLE_ANGLES.map((angle) => (
+            <Field key={angle.key} label={angle.label}>
+              <Input
+                dir="ltr"
+                placeholder="https://example.com/photo.jpg"
+                value={angleUrls[angle.key] ?? ""}
+                onChange={(e) => setAngleUrls((prev) => ({ ...prev, [angle.key]: e.target.value }))}
+              />
+            </Field>
+          ))}
         </CardContent>
       </Card>
 

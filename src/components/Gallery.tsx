@@ -2,7 +2,13 @@ import { useEffect, useState, useCallback } from "react";
 import { ChevronLeft, ChevronRight, X, Expand } from "lucide-react";
 import { cn } from "./ui/cn";
 
-export function Gallery({ images, alt }: { images: { url: string }[]; alt: string }) {
+export function Gallery({
+  images,
+  alt,
+}: {
+  images: { url: string; caption?: string }[];
+  alt: string;
+}) {
   const [active, setActive] = useState(0);
   const [fullscreen, setFullscreen] = useState(false);
 
@@ -44,11 +50,20 @@ export function Gallery({ images, alt }: { images: { url: string }[]; alt: strin
         )}
       </div>
 
+      {current.caption && (
+        <p className="mt-2 text-center text-xs text-[var(--color-steel-dark)]">{current.caption}</p>
+      )}
+
       {gallery.length > 1 && (
         <div className="mt-2 flex gap-2 overflow-x-auto">
           {gallery.map((img, i) => (
             <button key={i} onClick={() => setActive(i)} className={cn("relative h-16 w-20 shrink-0 overflow-hidden rounded-[var(--radius-card)] border-2", i === active ? "border-[var(--color-chrome-gold)]" : "border-transparent")}>
               <img src={img.url} alt="" className="h-full w-full object-cover" />
+              {img.caption && (
+                <span className="absolute inset-x-0 bottom-0 bg-black/55 px-1 py-0.5 text-center text-[9px] leading-tight text-white">
+                  {img.caption}
+                </span>
+              )}
             </button>
           ))}
         </div>

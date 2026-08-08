@@ -4,6 +4,7 @@ import { StatCard, VehicleStatusBadge, Card } from "../../components/ui";
 import { formatPrice } from "../../lib/format";
 import { useDashboardStats } from "../../hooks/useDashboardStats";
 import { timeAgo } from "../../lib/format";
+import { pickCoverImage } from "../../lib/angles";
 
 const ACTION_LABEL: Record<string, string> = {
   VEHICLE_CREATED: "נוצר רכב חדש",
@@ -37,7 +38,7 @@ export default function Dashboard() {
           <h2 className="mb-3 font-[family-name:var(--font-display)] text-lg">רכבים שנוספו לאחרונה</h2>
           <ul className="flex flex-col divide-y divide-[var(--color-steel)]">
             {data?.recentVehicles.map((v) => {
-              const cover = v.vehicle_images.find((i) => i.is_cover) ?? v.vehicle_images[0];
+              const cover = pickCoverImage(v.vehicle_images);
               return (
                 <li key={v.id}>
                   <Link to={`/admin/vehicles/${v.id}/edit`} className="flex items-center gap-3 py-2.5">

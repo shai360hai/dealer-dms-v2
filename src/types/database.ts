@@ -94,6 +94,7 @@ export interface Database {
           vehicle_id: string;
           url: string;
           storage_path: string | null;
+          angle: string | null;
           order_index: number;
           is_cover: boolean;
           created_at: string;
@@ -103,10 +104,11 @@ export interface Database {
           vehicle_id: string;
           url: string;
           storage_path?: string | null;
+          angle?: string | null;
           order_index?: number;
           is_cover?: boolean;
         };
-        Update: Partial<{ order_index: number; is_cover: boolean }>;
+        Update: Partial<{ order_index: number; is_cover: boolean; angle: string | null; url: string }>;
         Relationships: NoRelationships;
       };
       inquiries: {

@@ -7,6 +7,7 @@ import { FavoriteButton, ShareButton } from "../../components/FavoriteShareButto
 import { InquiryForm } from "../../components/InquiryForm";
 import { useVehicleBySlug, useSimilarVehicles } from "../../hooks/useVehicles";
 import { formatPrice, formatMileage } from "../../lib/format";
+import { sortByAngle, ANGLE_LABEL } from "../../lib/angles";
 import type { FuelType, TransmissionType, DriveType } from "../../types/database";
 
 const FUEL_LABEL: Record<FuelType, string> = { petrol: "בנזין", diesel: "דיזל", hybrid: "היברידי", plugin_hybrid: "נטען (Plug-in)", electric: "חשמלי" };
@@ -40,13 +41,18 @@ export default function VehicleDetail() {
   }
 
   const isEv = vehicle.fuel_type === "electric" || vehicle.fuel_type === "plugin_hybrid";
-  const images = [...vehicle.vehicle_images].sort((a, b) => a.order_index - b.order_index);
+  // Angle photos lead in a fixed order (front, rear, right, left,
+  // interior); any extra uploads follow after them.
+  const images = sortByAngle(vehicle.vehicle_images);
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1fr_360px]">
         <div>
-          <Gallery images={images} alt={`${vehicle.brand} ${vehicle.model}`} />
+          <Gallery
+            images={images.map((i) => ({ url: i.url, caption: i.angle ? ANGLE_LABEL[i.angle] : undefined }))}
+            alt={`${vehicle.brand} ${vehicle.model}`}
+          />
 
           <div className="mt-6 flex flex-wrap items-start justify-between gap-3">
             <div>

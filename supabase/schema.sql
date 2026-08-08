@@ -100,6 +100,7 @@ create table if not exists public.vehicle_images (
   vehicle_id uuid not null references public.vehicles (id) on delete cascade,
   url text not null,
   storage_path text, -- object path in the "vehicle-images" bucket, needed to delete later
+  angle text, -- front | rear | right | left | interior; null for ad-hoc uploads
   order_index int not null default 0,
   is_cover boolean not null default false,
   created_at timestamptz not null default now()

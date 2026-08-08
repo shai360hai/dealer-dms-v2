@@ -4,6 +4,7 @@ import { Search } from "lucide-react";
 import { Button, Input, VehicleCard } from "../../components/ui";
 import { InquiryForm } from "../../components/InquiryForm";
 import { useVehicles } from "../../hooks/useVehicles";
+import { pickCoverImage } from "../../lib/angles";
 
 const WHY_US = [
   { title: "מפרט מלא לכל רכב", body: "קילומטראז׳, בעלים קודמים, היסטוריית טיפולים ואחריות — לפני שהגעתם, לא אחרי." },
@@ -54,7 +55,7 @@ export default function Home() {
         </div>
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {featured?.items.map((v) => (
-            <VehicleCard key={v.id} vehicle={v} coverImage={v.vehicle_images.find((i) => i.is_cover) ?? v.vehicle_images[0]} />
+            <VehicleCard key={v.id} vehicle={v} coverImage={pickCoverImage(v.vehicle_images)} />
           ))}
         </div>
       </section>
@@ -63,7 +64,7 @@ export default function Home() {
         <h2 className="mb-6 font-[family-name:var(--font-display)] text-2xl">התווספו לאחרונה</h2>
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {latest?.items.map((v) => (
-            <VehicleCard key={v.id} vehicle={v} coverImage={v.vehicle_images.find((i) => i.is_cover) ?? v.vehicle_images[0]} />
+            <VehicleCard key={v.id} vehicle={v} coverImage={pickCoverImage(v.vehicle_images)} />
           ))}
         </div>
       </section>
