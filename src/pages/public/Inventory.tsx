@@ -28,12 +28,24 @@ export default function Inventory() {
     pageSize: 12,
   });
 
+  /** Changing any filter resets to page 1 — otherwise you can end up on
+   *  page 4 of a result set that now only has one page. */
   function setParam(key: string, value: string) {
     const next = new URLSearchParams(searchParams);
     if (value) next.set(key, value);
     else next.delete(key);
     next.delete("page");
     setSearchParams(next);
+  }
+
+  /** Paging must NOT go through setParam — that deletes the page param
+   *  by design, which would make every page button a no-op. */
+  function goToPage(p: number) {
+    const next = new URLSearchParams(searchParams);
+    if (p <= 1) next.delete("page");
+    else next.set("page", String(p));
+    setSearchParams(next);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   const selectClass = "h-10 rounded-[var(--radius-card)] border border-[var(--color-steel)] bg-white px-3 text-sm";
@@ -95,7 +107,7 @@ export default function Inventory() {
               {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
                 <button
                   key={p}
-                  onClick={() => setParam("page", String(p))}
+                  onClick={() => goToPage(p)}
                   className={`rounded-[var(--radius-card)] px-3 py-1.5 text-sm ${p === page ? "bg-[var(--color-navy)] text-white" : "border border-[var(--color-steel)]"}`}
                 >
                   {p}
