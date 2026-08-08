@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import { X, UploadCloud, CheckCircle2, AlertTriangle } from "lucide-react";
 import { Button } from "./ui";
 import { parseVehiclesCsv, type CsvParseResult } from "../lib/csv-import";
+import { parseVehiclesExcel, isExcelFile } from "../lib/excel-import";
 import { useImportVehicles, type ImportResult } from "../hooks/useImportVehicles";
 
 export function CsvImportDialog({ onClose }: { onClose: () => void }) {
@@ -10,14 +11,34 @@ export function CsvImportDialog({ onClose }: { onClose: () => void }) {
   const [parsed, setParsed] = useState<CsvParseResult | null>(null);
   const [result, setResult] = useState<ImportResult | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [isReading, setIsReading] = useState(false);
+  const [parseError, setParseError] = useState<string | null>(null);
   const importVehicles = useImportVehicles();
 
   async function handleFile(file: File) {
     setResult(null);
+    setParseError(null);
     setFileName(file.name);
-    // utf-8 handles the Hebrew headers; Papa strips the BOM Excel adds.
-    const text = await file.text();
-    setParsed(parseVehiclesCsv(text));
+    setIsReading(true);
+    try {
+      if (isExcelFile(file)) {
+        // .xlsx is a binary format — it has to be read as a workbook,
+        // not as text, or every cell comes back as mojibake.
+        setParsed(await parseVehiclesExcel(file));
+      } else {
+        // utf-8 handles the Hebrew headers; Papa strips the BOM Excel adds.
+        setParsed(parseVehiclesCsv(await file.text()));
+      }
+    } catch (err) {
+      setParsed(null);
+      setParseError(
+        err instanceof Error
+          ? `לא הצלחנו לקרוא את הקובץ: ${err.message}`
+          : "לא הצלחנו לקרוא את הקובץ. ודא שזהו קובץ CSV או XLSX תקין.",
+      );
+    } finally {
+      setIsReading(false);
+    }
   }
 
   function handleImport() {
@@ -30,7 +51,7 @@ export function CsvImportDialog({ onClose }: { onClose: () => void }) {
       <div className="max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-[var(--radius-card)] bg-white p-6 shadow-xl">
         <div className="mb-4 flex items-start justify-between">
           <div>
-            <h2 className="font-[family-name:var(--font-display)] text-xl">ייבוא רכבים מקובץ CSV</h2>
+            <h2 className="font-[family-name:var(--font-display)] text-xl">ייבוא רכבים מקובץ CSV או Excel</h2>
             <p className="mt-1 text-sm text-[var(--color-steel-dark)]">
               הכותרות בקובץ צריכות להיות בעברית, כפי שמופיעות בטופס הרכב (יצרן, דגם, שנה, מחיר…)
             </p>
@@ -60,12 +81,12 @@ export function CsvImportDialog({ onClose }: { onClose: () => void }) {
           >
             <UploadCloud size={24} className="text-[var(--color-steel-dark)]" />
             <span className="text-[var(--color-steel-dark)]">
-              {fileName ?? "גררו קובץ CSV לכאן או לחצו לבחירה"}
+              {fileName ?? "גררו קובץ CSV או Excel לכאן או לחצו לבחירה"}
             </span>
             <input
               ref={fileInputRef}
               type="file"
-              accept=".csv,text/csv"
+              accept=".csv,.xlsx,.xlsm,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
               className="hidden"
               onChange={(e) => {
                 const file = e.target.files?.[0];
@@ -74,6 +95,16 @@ export function CsvImportDialog({ onClose }: { onClose: () => void }) {
               }}
             />
           </div>
+        )}
+
+        {isReading && (
+          <p className="mt-4 text-center text-sm text-[var(--color-steel-dark)]">קורא את הקובץ…</p>
+        )}
+
+        {parseError && (
+          <p className="mt-4 rounded-[var(--radius-card)] bg-[color-mix(in_srgb,var(--color-status-sold)_10%,white)] px-3 py-2 text-sm text-[var(--color-status-sold)]">
+            {parseError}
+          </p>
         )}
 
         {parsed && !result && (

@@ -54,14 +54,14 @@ function normalizeHeader(h: string): string {
     .trim();
 }
 
-const UNMAPPED_PREFIX = "__unmapped__";
+export const UNMAPPED_PREFIX = "__unmapped__";
 const MAPPED_NAMES = new Set(Object.values(HEADER_MAP));
 
 /** Papa Parse can invoke transformHeader more than once for the same
  *  column, so this has to be idempotent — without the early return an
  *  already-transformed name gets prefixed again ("__unmapped____unmapped__x")
  *  and every row then reads back as empty. */
-function transformHeader(h: string): string {
+export function transformHeader(h: string): string {
   if (MAPPED_NAMES.has(h) || h.startsWith(UNMAPPED_PREFIX)) return h;
   const key = normalizeHeader(h);
   return HEADER_MAP[key] ?? `${UNMAPPED_PREFIX}${key}`;
@@ -156,6 +156,21 @@ export function parseVehiclesCsv(text: string): CsvParseResult {
   const unmappedHeaders = (parsed.meta.fields ?? [])
     .filter((f) => f.startsWith(UNMAPPED_PREFIX))
     .map((f) => f.slice(UNMAPPED_PREFIX.length));
+
+  return parseVehicleRows(parsed.data, unmappedHeaders);
+}
+
+/**
+ * Validates rows that have already been read out of a file and keyed by
+ * database column name. Shared by the CSV and Excel paths so both apply
+ * exactly the same validation, enum translation and error reporting —
+ * only the file-reading differs between them.
+ */
+export function parseVehicleRows(
+  rows: Record<string, string>[],
+  unmappedHeaders: string[] = [],
+): CsvParseResult {
+  const parsed = { data: rows, meta: { fields: [] as string[] } };
 
   const valid: ParsedVehicle[] = [];
   const invalid: CsvRowResult[] = [];

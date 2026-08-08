@@ -74,7 +74,8 @@ the account you created in step 2.
 
 ## Importing vehicles from CSV
 
-**Admin → רכבים → ייבוא מ-CSV.** Drop in a CSV whose header row uses
+**Admin → רכבים → ייבוא מ-CSV.** Drop in a **.csv or .xlsx/.xlsm** file
+whose header row uses
 the same Hebrew field names as the vehicle form (יצרן, דגם, שנה, מחיר,
 מספר מלאי…). The importer:
 
@@ -88,6 +89,11 @@ the same Hebrew field names as the vehicle form (יצרן, דגם, שנה, מח�
 - skips rows whose מספר מלאי already exists (or repeats within the file)
   rather than failing the whole batch, and reports them afterward
 - derives a unique SEO slug per vehicle, de-duplicating collisions
+
+Excel files are read as workbooks (first sheet) rather than as text,
+which avoids the Hebrew-mangling and comma-inside-cell problems of
+Excel's own CSV export — so .xlsx is generally the safer format to use.
+Both formats run through identical validation.
 
 Unrecognised columns are listed and ignored. Note that a תמונה column
 containing image *links* is not imported — vehicle photos are uploaded
